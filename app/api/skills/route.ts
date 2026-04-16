@@ -1,0 +1,45 @@
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { verifyToken } from "@/lib/auth";
+
+// 获取当前登录用户创建的所有 skill 列表
+export async function GET(request: NextRequest) {
+    try {
+        // 从请求 cookie 中获取认证 token
+        const token = request.cookies.get("auth_token")?.value;
+
+        // 未提供 token，返回未授权错误
+        if (!token) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // 校验 token 有效性，获取用户信息
+        const payload = verifyToken(token);
+        if (!payload) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // 从数据库查询当前用户创建的所有 skill
+        const skills = await prisma.skill.findMany({
+            where: { authorId: payload.userId }, // 只查询当前用户的 skill
+            orderBy: { createdAt: "desc" },      // 按创建时间倒序排列
+            select: {                            // 只返回需要的字段，优化性能
+                id: true,
+                name: true,
+                description: true,
+                isPublic: true,
+                createdAt: true,
+            },
+        });
+
+        // 返回查询到的 skill 列表
+        return NextResponse.json({ skills });
+    } catch (error) {
+        // 捕获服务端异常，打印日志并返回错误信息
+        console.error("Get skills error:", error);
+        return NextResponse.json(
+            { error: "Internal server error" },
+            { status: 500 }
+        );
+    }
+}

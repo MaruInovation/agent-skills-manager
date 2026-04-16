@@ -1,65 +1,93 @@
-import Image from "next/image";
+import Link from "next/link";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      <div className="min-h-[calc(100vh-8rem)]">
+        <section className="hero min-h-[60vh] bg-gradient-to-br from-primary/20 via-base-100 to-secondary/20">
+          <div className="hero-content text-center">
+            <div className="max-w-2xl">
+              <h1 className="text-5xl font-bold">
+                创建&分享 <span className="text-primary">Agent Skills</span>
+              </h1>
+              <p className="py-6 text-lg opacity-80">
+                使用 Markdown 创建强大的 AI Agent Skills。
+              </p>
+              <div className="flex gap-4 justify-center">
+                <Link href="/skills" className="btn btn-primary btn-lg">
+                  浏览 Skills
+                </Link>
+                <Link href="/register" className="btn btn-outline btn-lg">
+                  开始使用
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <section className="py-16 px-4">
+          <div className="container mx-auto">
+            <h2 className="text-3xl font-bold text-center mb-12">
+              已演示的渲染策略
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="card bg-base-200 shadow-xl">
+                <div className="card-body">
+                  <h3 className="card-title text-primary">📄 SSG（静态生成）</h3>
+                  <p>
+                    构建时一次性生成好页面，访问最快，适合首页、文档。
+                  </p>
+                  <div className="badge badge-outline">当前页</div>
+                </div>
+              </div>
+
+              <div className="card bg-base-200 shadow-xl">
+                <div className="card-body">
+                  <h3 className="card-title text-secondary">🔄 ISR（增量静态更新）</h3>
+                  <p>
+                    先生成静态页，后台自动悄悄更新，不用重新构建，适合经常变但不极端实时的内容。
+                  </p>
+                  <div className="badge badge-outline">/skills</div>
+                </div>
+              </div>
+
+              <div className="card bg-base-200 shadow-xl">
+                <div className="card-body">
+                  <h3 className="card-title text-accent">⚡ SSR（服务端渲染）</h3>
+                  <p>
+                    每次访问都在服务器现拼页面，首屏 SEO 好、数据实时，压力稍大。t.
+                  </p>
+                  <div className="badge badge-outline">/dashboard</div>
+                </div>
+              </div>
+
+              <div className="card bg-base-200 shadow-xl">
+                <div className="card-body">
+                  <h3 className="card-title text-warning">🎯 CSR（客户端渲染）</h3>
+                  <p>
+                    前端 JS 接管渲染，首次慢、交互流畅，适合后台管理、纯前端应用。
+                  </p>
+                  <div className="badge badge-outline">/login</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+
+        <section className="py-12 bg-base-200">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-2xl font-bold mb-8">技术栈</h2>
+            <div className="flex flex-wrap justify-center gap-4">
+              <div className="badge badge-lg badge-primary gap-2">Next.js 16</div>
+              <div className="badge badge-lg badge-secondary gap-2">React 19</div>
+              <div className="badge badge-lg badge-accent gap-2">Prisma 7</div>
+              <div className="badge badge-lg badge-info gap-2">MySQL</div>
+              <div className="badge badge-lg badge-success gap-2">DaisyUI</div>
+              <div className="badge badge-lg gap-2">Tailwind CSS 4</div>
+            </div>
+          </div>
+        </section>
+      </div>
   );
 }
