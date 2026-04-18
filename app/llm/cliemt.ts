@@ -5,6 +5,7 @@ type GenerateTextOptions = {
     messages: any[];
     temperature?: number;
     max_tokens?: number;
+    stream?: boolean;
 };
 
 type GenerateTextResult = {
@@ -17,25 +18,27 @@ const client = new OpenAI({
     apiKey: process.env.DEEPSEEK_API_KEY,
 });
 
-const generateText = async ({
+
+
+// 流式输出方法
+const generateTextStream = async ({
     model = "deepseek-chat",
     messages,
     temperature = 0.2,
     max_tokens = 200,
-}: GenerateTextOptions): Promise<GenerateTextResult> => {
-    const completion = await client.chat.completions.create({
+}: GenerateTextOptions) => {
+    const stream = await client.chat.completions.create({
         model,
         messages,
         temperature,
         max_tokens,
+        stream: true,
     });
 
-    return {
-        id: completion.id,
-        text: completion.choices[0]?.message.content || "无法回答",
-    };
+    return stream;
 };
 
+
 export const llmClient = {
-    generateText,
+    generateTextStream
 };
