@@ -1,24 +1,55 @@
+// 线上
 import { PrismaClient } from "@prisma/client";
-import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+import { withAccelerate } from "@prisma/extension-accelerate";
 
-const connectionString = process.env.DATABASE_URL;
+const accelerateUrl = process.env.DATABASE_URL;
 
-if (!connectionString) {
-    throw new Error("DATABASE_URL 未设置");
+if (!accelerateUrl) {
+    throw new Error("DATABASE_URL 未设置.");
 }
 
-const prismaClient = new PrismaClient({
-    adapter: new PrismaMariaDb(connectionString),
-});
+const createPrismaClient = () =>
+    new PrismaClient({
+        accelerateUrl,
+    }).$extends(withAccelerate());
 
 const globalForPrisma = globalThis as typeof globalThis & {
-    prisma?: typeof prismaClient;
+    prisma?: ReturnType<typeof createPrismaClient>;
 };
 
-export const prisma = globalForPrisma.prisma ?? prismaClient;
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
 if (process.env.NODE_ENV !== "production") {
     globalForPrisma.prisma = prisma;
 }
 
 export default prisma;
+
+
+
+// 本地
+// import { PrismaClient } from "@prisma/client";
+// import { PrismaMariaDb } from "@prisma/adapter-mariadb";
+
+// const connectionString = process.env.DIRECT_DATABASE_URL;
+
+// if (!connectionString) {
+//     throw new Error("DIRECT_DATABASE_URL 未设置");
+// }
+
+// const prismaClient = new PrismaClient({
+//     adapter: new PrismaMariaDb(connectionString),
+// });
+
+// const globalForPrisma = globalThis as typeof globalThis & {
+//     prisma?: typeof prismaClient;
+
+// };
+
+// export const prisma = globalForPrisma.prisma ?? prismaClient;
+
+// if (process.env.NODE_ENV !== "production") {
+//     globalForPrisma.prisma = prisma;
+// }
+
+// export default prisma;

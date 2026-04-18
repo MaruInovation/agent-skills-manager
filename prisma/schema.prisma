@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -13,21 +14,49 @@ model User {
   name      String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  openid    String?  @default(uuid()) @map("_openid") @db.Char(36)
   skills    Skill[]
+  agents    Agent[]
 
   @@map("users")
 }
 
 model Skill {
-  id          Int      @id @default(autoincrement())
-  name        String   @db.VarChar(100)
-  description String   @db.VarChar(500)
-  content     String   @db.Text
-  isPublic    Boolean  @default(true) @map("is_public")
-  authorId    Int      @map("author_id")
-  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(100)
+  description   String   @db.VarChar(500)
+  content       String   @db.Text
+  inputSchema   String   @db.Text
+  outputSchema  String?  @db.Text
+  isPublic      Boolean  @default(true) @map("is_public")
+  authorId      Int      @map("author_id")
+  openid        String?  @default(uuid()) @map("_openid") @db.Char(36)
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  examples      String?  @db.Text
+  errorHandling String?  @db.Text
+  tags          String   @db.VarChar(200)
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  agents        Agent[]
 
   @@map("skills")
+}
+
+model Agent {
+  id            Int      @id @default(autoincrement())
+  name          String   @db.VarChar(100)
+  description   String?  @db.VarChar(500)
+  prompt        String   @db.Text
+  systemContent String   @db.Text
+  model         String   @db.VarChar(100)
+  temperature   Float    @default(0.2)
+  isPublic      Boolean  @default(false) @map("is_public") // 是否公开
+  authorId      Int      @map("author_id")
+  openid        String?  @default(uuid()) @map("_openid") @db.Char(36)
+  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  skills        Skill[]
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("agents")
 }

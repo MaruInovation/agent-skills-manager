@@ -16,7 +16,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         // 校验 ID 是否为有效数字
         if (isNaN(skillId)) {
-            return NextResponse.json({ error: "Invalid skill ID" }, { status: 400 });
+            return NextResponse.json({ error: "skill ID 无效" }, { status: 400 });
         }
 
         // 从 Cookie 中获取登录 token
@@ -24,13 +24,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
         // 未登录直接返回 401
         if (!token) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "token 无效" }, { status: 401 });
         }
 
         // 校验 token 有效性，获取用户信息
         const payload = verifyToken(token);
         if (!payload) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json({ error: "token 无效" }, { status: 401 });
         }
 
         // 从数据库查询对应的 skill
@@ -40,23 +40,26 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 id: true,
                 name: true,
                 description: true,
-                content: true,
                 isPublic: true,
-                authorId: true,
-                createdAt: true,
-                updatedAt: true,
+                tags: true,
+                inputSchema: true,
+                outputSchema: true,
+                content: true,
+                errorHandling: true,
+                examples: true,
+                authorId: true
             },
         });
 
         // skill 不存在返回 404
         if (!skill) {
-            return NextResponse.json({ error: "Skill not found" }, { status: 404 });
+            return NextResponse.json({ error: "skill 不存在" }, { status: 404 });
         }
 
         // 权限校验：只有作者本人可以获取该 skill 详情
         if (skill.authorId !== payload.userId) {
             return NextResponse.json(
-                { error: "Not authorized to edit this skill" },
+                { error: "只有作者本人可以获取该 skill 详情l" },
                 { status: 403 }
             );
         }
