@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
 				id: true,
 				name: true,
 				description: true,
+				systemContent: true,
 				model: true,
 				temperature: true,
 				isPublic: true,
@@ -30,14 +31,18 @@ export async function GET(request: NextRequest) {
 					select: {
 						id: true,
 						name: true,
+						content: true
 					},
 				},
 			},
 		});
 
+
+
+
 		return NextResponse.json({ agents });
 	} catch (error) {
-		console.error("Get agents error:", error);
-		return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+		console.error("获取agent失败:", error);
+		return NextResponse.json({ error: "服务器异常" }, { status: 500 });
 	}
 }

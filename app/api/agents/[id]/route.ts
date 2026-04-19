@@ -63,7 +63,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 			},
 		});
 	} catch (error) {
-		console.error("Get agent error:", error);
-		return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+		console.error("获取agent失败:", error);
+		return NextResponse.json({ error: "服务器异常" }, { status: 500 });
 	}
 }

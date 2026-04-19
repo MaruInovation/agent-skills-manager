@@ -43,10 +43,9 @@ export async function GET(request: NextRequest) {
         // 返回查询到的 skill 列表
         return NextResponse.json({ skills });
     } catch (error) {
-        // 捕获服务端异常，打印日志并返回错误信息
-        console.error("Get skills error:", error);
+        console.error("获取skill失败:", error);
         return NextResponse.json(
-            { error: "Internal server error" },
+            { error: "服务器异常" },
             { status: 500 }
         );
     }

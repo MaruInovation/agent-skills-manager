@@ -64,13 +64,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             );
         }
 
-        // 校验通过，返回 skill 数据
+
         return NextResponse.json({ skill });
     } catch (error) {
-        // 服务端异常，打印日志并返回 500
-        console.error("Get skill error:", error);
+        console.error("获取skill失败:", error);
         return NextResponse.json(
-            { error: "Internal server error" },
+            { error: "服务器异常" },
             { status: 500 }
         );
     }

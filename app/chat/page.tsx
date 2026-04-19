@@ -1,19 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import TypingIndicator from "./components/TypingIndicator";
 import type { ChatFormData, Message } from "@/types/chat.type";
 import ChatMessage from "./components/ChatMessage";
 import ChatInput from "./components/ChatInput";
-
-type ChatResponse = {
-	message: string;
-};
+import { Agent } from "@/types/agent.type";
 
 const ChatBot = () => {
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [isBotTyping, setIsBotTyping] = useState(false);
 	const [error, setError] = useState("");
+	const [agents, setAgents] = useState<Agent[]>([]);
 
 	const conversationId = useRef(crypto.randomUUID());
 
@@ -23,7 +21,6 @@ const ChatBot = () => {
 			setMessages((prev) => [...prev, { content: prompt, role: "user" }]);
 			setError("");
 			setIsBotTyping(true);
-
 			// 2. 请求流式接口
 			const response = await fetch("/api/chat", {
 				method: "POST",
@@ -33,6 +30,7 @@ const ChatBot = () => {
 				body: JSON.stringify({
 					prompt,
 					conversationId: conversationId.current,
+					agent: agents[0],
 				}),
 			});
 
@@ -76,6 +74,19 @@ const ChatBot = () => {
 			setIsBotTyping(false);
 		}
 	};
+
+	const getAgents = async () => {
+		const response = await fetch("/api/agents");
+
+		if (response.ok) {
+			const data = await response.json();
+
+			setAgents(data.agents);
+		}
+	};
+	useEffect(() => {
+		getAgents();
+	}, []);
 
 	return (
 		<div className="p-4 h-[90vh]">

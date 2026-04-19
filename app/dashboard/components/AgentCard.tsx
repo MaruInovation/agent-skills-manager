@@ -7,15 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { deleteAgent } from "@/actions/agents";
 import SkeletonScreen from "./SkeletonScreen";
 import Empty from "./Empty";
-
-interface Agent {
-	id: number;
-	name: string;
-	description: string | null;
-	model: string;
-	isPublic: boolean;
-	createdAt: string;
-}
+import { Agent } from "@/types/agent.type";
 
 const AgentCard = () => {
 	const router = useRouter();
@@ -123,9 +115,13 @@ const AgentCard = () => {
 								<div className="flex justify-between items-start gap-2">
 									<div>
 										<h3 className="card-title text-lg">{agent.name}</h3>
-										<p className="text-xs text-base-content/60 mt-1">{agent.model}</p>
+										<p className="text-xs text-base-content/60 mt-1">
+											{agent.model}
+										</p>
 									</div>
-									<div className={`badge ${agent.isPublic ? "badge-info" : "badge-primary"}`}>
+									<div
+										className={`badge ${agent.isPublic ? "badge-info" : "badge-primary"}`}
+									>
 										{agent.isPublic ? "公开" : "私有"}
 									</div>
 								</div>

@@ -22,10 +22,6 @@ export async function createSkill(
 ): Promise<ActionResult> {
 
 
-    console.log('当前运行时:', typeof window === 'undefined' ? 'server' : 'client');
-    console.log('是否有 process.env:', typeof process !== 'undefined');
-    console.log('是否有 process.version:', typeof process !== 'undefined' ? process.version : 'no');
-
 
     try {
         const user = await prisma.user.findUnique({
@@ -43,6 +39,7 @@ export async function createSkill(
         const skill = await prisma.skill.create({
             data: {
                 ...data,
+                
                 authorId: userId,
             },
         });

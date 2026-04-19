@@ -1,102 +1,216 @@
+// route.ts
 import { NextRequest } from "next/server";
-import fs from "node:fs";
-import path from "node:path";
 import { z } from "zod";
-import { llmClient } from "@/llm/cliemt"; // 你这里写错了 cliemt → client
+import OpenAI from "openai";
+import { llmClient } from "@/llm/client";
 import { conversationRepository } from "@/api/chat/a/conversation.repository";
+import { executeMultipleToolCalls } from "@/llm/executor";
+import { Agent } from "@/types/agent.type";
 
-type ChatMessage = {
-    role: "system" | "user" | "assistant";
-    content: string;
+type AgentStream = {
+    messages: OpenAI.ChatCompletionMessageParam[];
+    conversationId: string;
+    originalMessages: OpenAI.ChatCompletionMessageParam[];
+    controller: ReadableStreamDefaultController;
+    agent: Agent;
 };
 
 const chatSchema = z.object({
-    prompt: z
-        .string()
-        .trim()
-        .min(1, "prompt is required")
-        .max(1000, "prompt must be at most 1000 characters"),
-    conversationId: z.string().trim().min(1, "conversationId is required"),
+    prompt: z.string().trim().min(1).max(1000),
+    conversationId: z.string().trim().min(1),
+    agent: z.object({
+        id: z.number(),
+        name: z.string(),
+        description: z.string().nullable(),
+        model: z.string(),
+        temperature: z.number(),
+        systemContent: z.string().nullable().optional(),
+        isPublic: z.boolean(),
+        createdAt: z.string(),
+        skills: z.array(
+            z.object({
+                id: z.number(),
+                name: z.string(),
+                content: z.string().nullable(),
+            })
+        ),
+    }),
 });
 
-const promptsDir = path.join(process.cwd(), "app", "prompts");
-const parkInfo = fs.readFileSync(path.join(promptsDir, "WonderWorld.md"), "utf-8");
-const template = fs.readFileSync(path.join(promptsDir, "chatbot.txt"), "utf-8");
-const instructions = template.replace("{{parkInfo}}", parkInfo);
+// 处理完整的 Agent 对话（真正的流式）
+async function handleAgentStream({
+    messages,
+    conversationId,
+    originalMessages,
+    controller,
+    agent,
+}: AgentStream) {
+    let currentMessages = [ ...messages ];
+    let maxIterations = 5;
+    let iteration = 0;
+    let fullResponse = "";
 
-export const runtime = "nodejs";
+    while (iteration < maxIterations) {
+        iteration++;
 
-// 流式响应必须用 Response，不能用 NextResponse
+        // 调用流式 LLM
+        // console.log('currentMessages===', currentMessages);
+
+        const { stream } = await llmClient.generateTextStreamWithTools({
+            messages: currentMessages,
+            agent,
+        });
+
+        // 临时存储当前轮的输出
+        let currentRoundContent = "";
+        let currentRoundToolCalls: any[] = [];
+
+        // 读取流
+        const reader = stream.getReader();
+        let hasToolCallInThisRound = false;
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = new TextDecoder().decode(value);
+
+            // 检查是否是工具调用信号
+            if (chunk.includes('"type":"TOOL_CALLS"')) {
+                try {
+                    const signal = JSON.parse(chunk);
+                    if (signal.type === "TOOL_CALLS") {
+                        hasToolCallInThisRound = true;
+                        currentRoundToolCalls = signal.data;
+                        // 向前端发送工具调用状态
+                        // controller.enqueue(new TextEncoder().encode(`\n[🔧 正在查询信息...]\n`));
+                    }
+                } catch (e) {
+                    // 不是 JSON，是普通内容
+                    controller.enqueue(value);
+                    currentRoundContent += chunk;
+                    fullResponse += chunk;
+                }
+            } else {
+                // 普通内容，直接推送给前端
+                controller.enqueue(value);
+                currentRoundContent += chunk;
+                fullResponse += chunk;
+            }
+        }
+
+        // 如果有工具调用
+        if (hasToolCallInThisRound) {
+            const toolCalls = currentRoundToolCalls.length > 0 ? currentRoundToolCalls : [];
+
+            if (toolCalls.length > 0) {
+                // 添加助手消息
+                currentMessages.push({
+                    role: "assistant",
+                    content: currentRoundContent || null,
+                    tool_calls: toolCalls.map((tc: any) => ({
+                        id: tc.id,
+                        type: "function",
+                        function: {
+                            name: tc.function.name,
+                            arguments: tc.function.arguments,
+                        },
+                    })),
+                } as any);
+
+                // 执行工具
+                // controller.enqueue(new TextEncoder().encode(`\n[✅ 查询完成，正在生成回复...]\n`));
+
+                // console.log("toolCalls", toolCalls);
+
+                const toolResults = await executeMultipleToolCalls(toolCalls);
+
+                currentMessages.push(...toolResults);
+
+                // 继续循环，让模型生成最终回复
+                continue;
+            }
+        }
+
+        // 没有工具调用，说明已经完成
+        break;
+    }
+
+    // 保存对话历史
+    const updatedMessages = [ ...originalMessages, { role: "assistant", content: fullResponse } ];
+    conversationRepository.setMessages(conversationId, updatedMessages as any);
+}
+
 export async function POST(request: NextRequest) {
     try {
         const body = await request.json();
+
         const parseResult = chatSchema.safeParse(body);
 
         if (!parseResult.success) {
-            return new Response(
-                JSON.stringify({ error: parseResult.error.format() }),
-                { status: 400, headers: { "Content-Type": "application/json" } }
-            );
+            return new Response(JSON.stringify({ error: parseResult.error.format() }), {
+                status: 400,
+                headers: { "Content-Type": "application/json" },
+            });
         }
 
-        const { prompt, conversationId } = parseResult.data;
+        const { prompt, conversationId, agent } = parseResult.data;
+        const normalizedAgent: Agent = {
+            ...agent,
+            description: agent.description ?? "",
+            systemContent: agent.systemContent ?? "",
+            skills: agent.skills.map((skill) => ({
+                ...skill,
+                content: skill.content ?? "",
+            })),
 
-        // 获取历史消息 + 当前用户提问
-        const messages = [
-            ...conversationRepository.getMessages(conversationId),
+        };
+
+
+        // 获取历史消息
+        const historyMessages = (conversationRepository.getMessages(conversationId) ||
+            []) as OpenAI.ChatCompletionMessageParam[];
+
+        // 构建消息列表
+        let instructions = normalizedAgent.systemContent;
+        const messages: OpenAI.ChatCompletionMessageParam[] = [
+            { role: "system", content: instructions },
+            ...historyMessages,
             { role: "user", content: prompt },
-        ] as ChatMessage[];
+        ];
 
-        // 1. 调用流式 LLM
-        const stream = await llmClient.generateTextStream({
-            messages: [ { role: "system", content: instructions }, ...messages ],
-        });
-
-        // 2. 拼接完整回答（用于保存上下文）
-        let fullText = "";
-
-        // 3. 创建流式转换（ReadableStream → 前端可接收的流）
+        // 创建流式响应
         const responseStream = new ReadableStream({
             async start(controller) {
                 try {
-                    for await (const chunk of stream) {
-                        const content = chunk.choices[ 0 ]?.delta?.content || "";
-                        if (content) {
-                            fullText += content;
-                            // 把内容推送给前端
-                            controller.enqueue(new TextEncoder().encode(content));
-                        }
-                    }
-                    // 流结束
+                    await handleAgentStream({
+                        messages,
+                        conversationId,
+                        originalMessages: [ ...historyMessages, { role: "user", content: prompt } ],
+                        controller,
+                        agent: normalizedAgent,
+                    });
                     controller.close();
-
-                    // 4. 保存完整对话上下文（关键！）
-                    const updatedMessages: ChatMessage[] = [
-                        ...messages,
-                        { role: "assistant", content: fullText },
-                    ];
-                    conversationRepository.setMessages(conversationId, updatedMessages);
-
                 } catch (error) {
                     console.error("Stream error:", error);
-                    controller.error(error);
+                    const errorMsg = `\n[错误] ${error instanceof Error ? error.message : String(error)}`;
+                    controller.enqueue(new TextEncoder().encode(errorMsg));
+                    controller.close();
                 }
             },
         });
 
-        // 5. 返回流式响应
         return new Response(responseStream, {
             headers: {
                 "Content-Type": "text/plain; charset=utf-8",
                 "Transfer-Encoding": "chunked",
             },
         });
-
     } catch (error) {
-        console.error("Chat route error:", error);
-        return new Response(
-            JSON.stringify({ error: "Internal server error" }),
-            { status: 500, headers: { "Content-Type": "application/json" } }
-        );
+        console.error("chat异常:", error);
+        return new Response(JSON.stringify({ error: "服务器异常" }), {
+            status: 500,
+            headers: { "Content-Type": "application/json" },
+        });
     }
 }
