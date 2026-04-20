@@ -1,4 +1,6 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
 import { MdDeleteForever } from "react-icons/md";
 
 type ConversationItem = {
@@ -22,16 +24,16 @@ const ConversationSidebar = ({
 	onSelectConversation,
 	onDeleteConversation,
 }: Props) => {
-	const menuWrapperRef = useRef<HTMLDivElement | null>(null);
+	const sidebarRef = useRef<HTMLElement | null>(null);
 	const [openMenuConversationId, setOpenMenuConversationId] = useState<string | null>(null);
 	const [deletingConversationId, setDeletingConversationId] = useState<string | null>(null);
 	const [menuPosition, setMenuPosition] = useState<{ top: number; left: number } | null>(null);
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
-			if (!menuWrapperRef.current) return;
+			if (!sidebarRef.current) return;
 			const target = event.target as Node | null;
-			if (target && !menuWrapperRef.current.contains(target)) {
+			if (target && !sidebarRef.current.contains(target)) {
 				setOpenMenuConversationId(null);
 			}
 		};
@@ -73,7 +75,10 @@ const ConversationSidebar = ({
 	};
 
 	return (
-		<aside className="w-72 shrink-0 h-full rounded-2xl border border-base-300 bg-base-100/80 p-3 flex flex-col">
+		<aside
+			ref={sidebarRef}
+			className="w-72 shrink-0 h-full rounded-2xl border border-base-300 bg-base-100/80 p-3 flex flex-col"
+		>
 			<div
 				role="button"
 				tabIndex={0}
@@ -84,10 +89,7 @@ const ConversationSidebar = ({
 				+ 新对话
 			</div>
 
-			<div
-				className="mt-3 flex-1 overflow-y-auto overflow-x-visible space-y-2"
-				ref={menuWrapperRef}
-			>
+			<div className="mt-3 flex-1 overflow-y-auto overflow-x-visible space-y-2">
 				{conversations.map((conversation) => {
 					const isActive = conversation.id === activeConversationId;
 					const isMenuOpen = openMenuConversationId === conversation.id;
@@ -107,9 +109,7 @@ const ConversationSidebar = ({
 								tabIndex={0}
 								onClick={() => onSelectConversation(conversation.id)}
 								onKeyDown={(event) =>
-									onKeyActivate(event, () =>
-										onSelectConversation(conversation.id)
-									)
+									onKeyActivate(event, () => onSelectConversation(conversation.id))
 								}
 								className="min-w-0 pr-8 cursor-pointer"
 							>
