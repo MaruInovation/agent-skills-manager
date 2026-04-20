@@ -8,15 +8,16 @@ datasource db {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
-  name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  openid    String?  @default(uuid()) @map("_openid") @db.Char(36)
-  skills    Skill[]
-  agents    Agent[]
+  id           Int           @id @default(autoincrement())
+  email        String        @unique
+  password     String
+  name         String
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+  openid       String?       @default(uuid()) @map("_openid") @db.Char(36)
+  skills       Skill[]
+  agents       Agent[]
+  chatMessages ChatMessage[]
 
   @@map("users")
 }
@@ -43,20 +44,38 @@ model Skill {
 }
 
 model Agent {
-  id            Int      @id @default(autoincrement())
-  name          String   @db.VarChar(100)
-  description   String?  @db.VarChar(500)
-  prompt        String   @db.Text
-  systemContent String   @db.Text
-  model         String   @db.VarChar(100)
-  temperature   Float    @default(0.2)
-  isPublic      Boolean  @default(false) @map("is_public") // 是否公开
-  authorId      Int      @map("author_id")
-  openid        String?  @default(uuid()) @map("_openid") @db.Char(36)
-  author        User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  id            Int           @id @default(autoincrement())
+  name          String        @db.VarChar(100)
+  description   String?       @db.VarChar(500)
+  prompt        String        @db.Text
+  systemContent String        @db.Text
+  model         String        @db.VarChar(100)
+  temperature   Float         @default(0.2)
+  isPublic      Boolean       @default(false) @map("is_public")
+  authorId      Int           @map("author_id")
+  openid        String?       @default(uuid()) @map("_openid") @db.Char(36)
+  author        User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
   skills        Skill[]
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  chatMessages  ChatMessage[]
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
 
   @@map("agents")
+}
+
+model ChatMessage {
+  id             Int      @id @default(autoincrement())
+  conversationId String   @map("conversation_id") @db.Char(36)
+  message        String   @db.LongText
+  userId         Int      @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId        Int?     @map("agent_id")
+  agent          Agent?   @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([conversationId, createdAt])
+  @@index([userId, conversationId, createdAt])
+  @@index([agentId])
+  @@map("chat_messages")
 }

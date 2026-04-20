@@ -3,9 +3,10 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 import OpenAI from "openai";
 import { llmClient } from "@/llm/client";
-import { conversationRepository } from "@/api/chat/a/conversation.repository";
+import { conversationRepository } from "@/api/chat/repository/conversation.repository";
 import { executeMultipleToolCalls } from "@/llm/executor";
 import { Agent } from "@/types/agent.type";
+import { verifyToken } from "@/lib/auth";
 
 type AgentStream = {
     messages: OpenAI.ChatCompletionMessageParam[];
@@ -13,6 +14,7 @@ type AgentStream = {
     originalMessages: OpenAI.ChatCompletionMessageParam[];
     controller: ReadableStreamDefaultController;
     agent: Agent;
+    userId: number;
 };
 
 const chatSchema = z.object({
@@ -44,6 +46,7 @@ async function handleAgentStream({
     originalMessages,
     controller,
     agent,
+    userId,
 }: AgentStream) {
     let currentMessages = [ ...messages ];
     let maxIterations = 5;
@@ -138,7 +141,12 @@ async function handleAgentStream({
 
     // 保存对话历史
     const updatedMessages = [ ...originalMessages, { role: "assistant", content: fullResponse } ];
-    conversationRepository.setMessages(conversationId, updatedMessages as any);
+    await conversationRepository.setMessages({
+        conversationId,
+        userId,
+        agentId: agent.id,
+        messages: updatedMessages as OpenAI.ChatCompletionMessageParam[],
+    });
 }
 
 export async function POST(request: NextRequest) {
@@ -150,6 +158,22 @@ export async function POST(request: NextRequest) {
         if (!parseResult.success) {
             return new Response(JSON.stringify({ error: parseResult.error.format() }), {
                 status: 400,
+                headers: { "Content-Type": "application/json" },
+            });
+        }
+
+        const token = request.cookies.get("auth_token")?.value;
+        if (!token) {
+            return new Response(JSON.stringify({ error: "token 无效" }), {
+                status: 401,
+                headers: { "Content-Type": "application/json" },
+            });
+        }
+
+        const payload = verifyToken(token);
+        if (!payload) {
+            return new Response(JSON.stringify({ error: "token 无效" }), {
+                status: 401,
                 headers: { "Content-Type": "application/json" },
             });
         }
@@ -168,8 +192,10 @@ export async function POST(request: NextRequest) {
 
 
         // 获取历史消息
-        const historyMessages = (conversationRepository.getMessages(conversationId) ||
-            []) as OpenAI.ChatCompletionMessageParam[];
+        const historyMessages = await conversationRepository.getMessages({
+            conversationId,
+            userId: payload.userId,
+        });
 
         // 构建消息列表
         let instructions = normalizedAgent.systemContent;
@@ -189,6 +215,7 @@ export async function POST(request: NextRequest) {
                         originalMessages: [ ...historyMessages, { role: "user", content: prompt } ],
                         controller,
                         agent: normalizedAgent,
+                        userId: payload.userId,
                     });
                     controller.close();
                 } catch (error) {
