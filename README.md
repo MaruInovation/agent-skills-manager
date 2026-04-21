@@ -15,7 +15,3 @@ bun dev
 - DEEPSEEK_API_KEY = deepseekKey
 - DIRECT_DATABASE_URL = mysql地址
 - DATABASE_URL = prismaAccelerate
-
-# todo
-
-- 消息存储

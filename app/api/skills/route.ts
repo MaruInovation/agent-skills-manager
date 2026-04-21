@@ -5,6 +5,7 @@ import { verifyToken } from "@/lib/auth";
 // 获取当前登录用户创建的所有 skill 列表
 export async function GET(request: NextRequest) {
     try {
+        const includePublic = request.nextUrl.searchParams.get("includePublic") === "true";
         // 从请求 cookie 中获取认证 token
         const token = request.cookies.get("auth_token")?.value;
 
@@ -21,7 +22,11 @@ export async function GET(request: NextRequest) {
 
         // 从数据库查询当前用户创建的所有 skill
         const skills = await prisma.skill.findMany({
-            where: { authorId: payload.userId }, // 只查询当前用户的 skill
+            where: includePublic
+                ? {
+                    OR: [{ authorId: payload.userId }, { isPublic: true }],
+                }
+                : { authorId: payload.userId }, // 默认只查询当前用户的 skill
             orderBy: { createdAt: "desc" },      // 按创建时间倒序排列
             select: {                            // 只返回需要的字段，优化性能
                 id: true,

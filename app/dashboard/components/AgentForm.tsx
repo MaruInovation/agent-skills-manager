@@ -57,7 +57,7 @@ const AgentForm = ({ onSubmit, isSubmitting, defaultValues }: Props) => {
 	useEffect(() => {
 		const fetchSkills = async () => {
 			try {
-				const response = await fetch("/api/skills", {
+				const response = await fetch("/api/skills?includePublic=true", {
 					credentials: "include",
 				});
 				if (!response.ok) return;

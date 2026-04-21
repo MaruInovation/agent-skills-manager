@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import TypingIndicator from "./components/TypingIndicator";
 import type { ChatSubmitData, Message } from "@/types/chat.type";
 import type OpenAI from "openai";
@@ -8,6 +9,7 @@ import ChatMessage from "./components/ChatMessage";
 import ChatInput from "./components/ChatInput";
 import { Agent } from "@/types/agent.type";
 import ConversationSidebar from "./components/ConversationSidebar";
+import { useAuth } from "@/hooks/useAuth";
 
 type Conversation = {
 	id: string;
@@ -61,6 +63,8 @@ const parseConversationMessages = (raw: string): Message[] => {
 };
 
 const ChatBot = () => {
+	const router = useRouter();
+	const { isAuthenticated, isLoading } = useAuth();
 	const [conversations, setConversations] = useState<Conversation[]>(() => [createConversation()]);
 	const [activeConversationId, setActiveConversationId] = useState<string>(() => conversations[0].id);
 	const [isBotTyping, setIsBotTyping] = useState(false);
@@ -117,6 +121,7 @@ const ChatBot = () => {
 	};
 
 	const onSubmit = async ({ prompt, agent }: ChatSubmitData) => {
+		if (!isAuthenticated) return;
 		if (!activeConversationId) return;
 
 		const targetConversationId = activeConversationId;
@@ -267,9 +272,10 @@ const ChatBot = () => {
 	};
 
 	useEffect(() => {
+		if (isLoading || !isAuthenticated) return;
 		getAgents();
 		getConversations();
-	}, []);
+	}, [isAuthenticated, isLoading]);
 
 	return (
 		<div className="p-4 h-[90vh]">
@@ -294,6 +300,23 @@ const ChatBot = () => {
 					<ChatInput onSubmit={onSubmit} agents={agents} />
 				</div>
 			</div>
+			{!isLoading && !isAuthenticated && (
+				<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+					<div className="w-full max-w-sm rounded-2xl bg-base-100 p-6 shadow-2xl">
+						<h3 className="text-lg font-semibold">还没有登录</h3>
+						<p className="mt-2 text-sm text-base-content/70">登录后才可以使用 Chat 功能。</p>
+						<div className="mt-5 flex justify-end gap-2">
+							<button
+								type="button"
+								className="btn btn-primary"
+								onClick={() => router.push("/login?from=/chat")}
+							>
+								去登录
+							</button>
+						</div>
+					</div>
+				</div>
+			)}
 		</div>
 	);
 };

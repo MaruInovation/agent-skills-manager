@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
 		}
 
 		const agents = await prisma.agent.findMany({
-			where: { authorId: payload.userId },
+			where: {
+				OR: [{ authorId: payload.userId }, { isPublic: true }],
+			},
 			orderBy: { createdAt: "desc" },
 			select: {
 				id: true,
