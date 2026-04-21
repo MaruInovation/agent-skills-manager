@@ -27,13 +27,12 @@ export default function HomePage() {
 							>
 								浏览 Skill 库
 							</Link>
-							<Link
-								href="/chat"
-								className="btn btn-outline btn-lg"
-							>
-								开始使用
-							</Link>
+						
 						</div> */}
+
+						<Link href="/chat" className="btn btn-outline btn-lg">
+							开始使用
+						</Link>
 					</div>
 				</div>
 			</section>
