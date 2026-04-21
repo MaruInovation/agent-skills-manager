@@ -7,9 +7,10 @@ import type { Agent } from "@/types/agent.type";
 type Props = {
 	onSubmit: (data: ChatSubmitData) => void;
 	agents: Agent[];
+	preferredAgentId?: number | null;
 };
 
-const ChatInput = ({ onSubmit, agents }: Props) => {
+const ChatInput = ({ onSubmit, agents, preferredAgentId = null }: Props) => {
 	const wrapperRef = useRef<HTMLDivElement | null>(null);
 	const { register, handleSubmit, reset, control, formState } = useForm<ChatFormData>({
 		mode: "onChange",
@@ -21,9 +22,10 @@ const ChatInput = ({ onSubmit, agents }: Props) => {
 	const [selectedAgentId, setSelectedAgentId] = useState<number | null>(null);
 
 	const promptValue = useWatch({ control, name: "prompt", defaultValue: "" });
+	const effectiveSelectedAgentId = selectedAgentId ?? preferredAgentId;
 	const selectedAgent = useMemo(
-		() => agents.find((agent) => agent.id === selectedAgentId) ?? null,
-		[agents, selectedAgentId]
+		() => agents.find((agent) => agent.id === effectiveSelectedAgentId) ?? null,
+		[agents, effectiveSelectedAgentId]
 	);
 	const finalSelectedAgent = selectedAgent ?? agents[0] ?? null;
 

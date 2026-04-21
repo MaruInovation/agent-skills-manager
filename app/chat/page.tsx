@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import TypingIndicator from "./components/TypingIndicator";
 import type { ChatSubmitData, Message } from "@/types/chat.type";
 import type OpenAI from "openai";
@@ -16,6 +16,7 @@ type Conversation = {
 	title: string;
 	messages: Message[];
 	updatedAt: number;
+	agentId: number | null;
 };
 
 type ChatMessageRow = {
@@ -31,6 +32,7 @@ const createConversation = (): Conversation => ({
 	title: "新对话",
 	messages: [],
 	updatedAt: Date.now(),
+	agentId: null,
 });
 
 const buildConversationTitle = (prompt: string) => {
@@ -64,6 +66,7 @@ const parseConversationMessages = (raw: string): Message[] => {
 
 const ChatBot = () => {
 	const router = useRouter();
+	const searchParams = useSearchParams();
 	const { isAuthenticated, isLoading } = useAuth();
 	const [conversations, setConversations] = useState<Conversation[]>(() => [createConversation()]);
 	const [activeConversationId, setActiveConversationId] = useState<string>(() => conversations[0].id);
@@ -91,6 +94,13 @@ const ChatBot = () => {
 	);
 
 	const activeMessages = activeConversation?.messages ?? [];
+	const requestedAgentId = useMemo(() => {
+		const raw = searchParams.get("agentId");
+		if (!raw) return null;
+		const parsed = Number(raw);
+		return Number.isInteger(parsed) ? parsed : null;
+	}, [searchParams]);
+	const preferredAgentId = activeConversation?.agentId ?? requestedAgentId;
 
 	const updateConversation = (
 		conversationId: string,
@@ -136,6 +146,7 @@ const ChatBot = () => {
 					title: nextTitle,
 					messages: [...conversation.messages, { content: prompt, role: "user" }],
 					updatedAt: Date.now(),
+					agentId: agent.id,
 				};
 			});
 
@@ -234,6 +245,7 @@ const ChatBot = () => {
 				title: firstUserMessage ? buildConversationTitle(firstUserMessage) : "新对话",
 				messages,
 				updatedAt: new Date(row.updatedAt).getTime(),
+				agentId: row.agentId,
 			};
 		});
 
@@ -297,7 +309,11 @@ const ChatBot = () => {
 						{isBotTyping && <TypingIndicator />}
 						{error && <p className="text-red-500">{error}</p>}
 					</div>
-					<ChatInput onSubmit={onSubmit} agents={agents} />
+					<ChatInput
+						onSubmit={onSubmit}
+						agents={agents}
+						preferredAgentId={preferredAgentId}
+					/>
 				</div>
 			</div>
 			{!isLoading && !isAuthenticated && (
